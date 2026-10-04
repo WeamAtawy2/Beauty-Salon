@@ -1,6 +1,6 @@
-# BANA VILLA public website
+# BEAUTY SALON public website
 
-Arabic, responsive React/Vite website with an Express REST API and PostgreSQL booking database. The supplied WhatsApp photos are used as portfolio and bridal work. The archive did not include villa/interior photos, a logo, official service list or prices, staff details, phone number, location or social links, so the site leaves those details clearly marked/configurable rather than making them up.
+Arabic, responsive React/Vite website for BEAUTY SALON with an Express REST API and PostgreSQL booking database. The supplied beauty photographs are used in the hero, service stories, bridal feature and stacked portfolio. The photo archive does not include salon-interior photos, a logo, staff details, phone number, location or social links. Official service names and prices come from the database API.
 
 ## Run locally
 
@@ -8,7 +8,7 @@ Arabic, responsive React/Vite website with an Express REST API and PostgreSQL bo
 2. Run `npm install`.
 3. Create a PostgreSQL database, copy `.env.example` to `.env`, and set `DATABASE_URL`.
 4. Apply `backend/database/schema.sql` to that database.
-5. Add the salon's verified services, staff, staff-to-service assignments, staff shifts (`staff_hours`), and villa opening hours to the database. Keep prices `NULL` until the owner provides them. Do not add appointment slots manually; they are calculated from current business hours and staff availability.
+5. Add the salon's verified services, staff, staff-to-service assignments, staff shifts (`staff_hours`), and salon opening hours to the database. Keep prices `NULL` until the owner provides them. Do not add appointment slots manually; they are calculated from current business hours and staff availability.
 6. Run `npm run dev`. The React site is at `http://localhost:5173`; Express API is at `http://localhost:4000`.
 
 Without a configured database, the API returns `503` and booking is explicitly shown as being set up. It does not generate sample availability.

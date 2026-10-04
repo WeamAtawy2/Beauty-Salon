@@ -55,7 +55,7 @@ router.post('/bookings', async (req, res, next) => {
     if (!rows[0]) { await client.query('ROLLBACK'); return res.status(404).json({ error: 'هذه الخدمة غير متاحة حالياً.' }); }
     const weekday = parsedDate.getUTCDay();
     const { rows: opening } = await client.query('SELECT opens::text, closes::text, closed FROM opening_hours WHERE weekday = $1', [weekday]);
-    if (!opening[0] || opening[0].closed) { await client.query('ROLLBACK'); return res.status(409).json({ error: 'الفيلّا مغلقة في هذا اليوم.' }); }
+    if (!opening[0] || opening[0].closed) { await client.query('ROLLBACK'); return res.status(409).json({ error: 'الصالون مغلق في هذا اليوم.' }); }
     const duration = rows[0].duration_minutes;
     const startMinute = hour * 60 + minute;
     const [openHour, openMinute] = opening[0].opens.split(':').map(Number);

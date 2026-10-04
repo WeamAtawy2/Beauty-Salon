@@ -39,5 +39,5 @@ app.use((error, req, res, next) => {
   res.status(500).json({ error: 'حدثت مشكلة أثناء الاتصال. يرجى المحاولة لاحقاً.' });
 });
 
-app.listen(port, () => console.log(`BANA VILLA API listening on port ${port}`));
+app.listen(port, () => console.log(`BEAUTY SALON API listening on port ${port}`));
 process.on('SIGTERM', () => pool?.end().finally(() => process.exit(0)));
