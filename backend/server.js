@@ -4,15 +4,30 @@ import cors from 'cors';
 import helmet from 'helmet';
 import rateLimit from 'express-rate-limit';
 import pg from 'pg';
+import fs from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import publicRoutes from './routes/public.js';
+import { initializeDefaultData } from './database/seedDefaults.js';
 
 const { Pool } = pg;
 const app = express();
 const port = Number(process.env.PORT || 4000);
 const here = path.dirname(fileURLToPath(import.meta.url));
 const pool = process.env.DATABASE_URL ? new Pool({ connectionString: process.env.DATABASE_URL, ssl: process.env.DATABASE_SSL === 'true' ? { rejectUnauthorized: true } : undefined }) : null;
+
+async function initializeDatabase() {
+  if (!pool) return;
+  try {
+    const schemaSql = await fs.readFile(path.resolve(here, 'database/schema.sql'), 'utf8');
+    await pool.query(schemaSql);
+    await initializeDefaultData(pool);
+  } catch (error) {
+    console.warn('Database bootstrap warning:', error.message);
+  }
+}
+
+await initializeDatabase();
 
 app.disable('x-powered-by');
 app.use(helmet({ crossOriginResourcePolicy: { policy: 'cross-origin' }, contentSecurityPolicy: false }));
