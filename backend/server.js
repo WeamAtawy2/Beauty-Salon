@@ -8,7 +8,6 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import publicRoutes from './routes/public.js';
-import { initializeDefaultData } from './database/seedDefaults.js';
 
 const { Pool } = pg;
 const app = express();
@@ -21,7 +20,6 @@ async function initializeDatabase() {
   try {
     const schemaSql = await fs.readFile(path.resolve(here, 'database/schema.sql'), 'utf8');
     await pool.query(schemaSql);
-    await initializeDefaultData(pool);
   } catch (error) {
     console.warn('Database bootstrap warning:', error.message);
   }
@@ -54,5 +52,9 @@ app.use((error, req, res, next) => {
   res.status(500).json({ error: 'حدثت مشكلة أثناء الاتصال. يرجى المحاولة لاحقاً.' });
 });
 
-app.listen(port, () => console.log(`BEAUTY SALON API listening on port ${port}`));
+// Vercel imports the Express app as a serverless function; local development
+// still starts the long-running server on PORT (4000 by default).
+if (!process.env.VERCEL) app.listen(port, () => console.log(`BEAUTY SALON API listening on port ${port}`));
 process.on('SIGTERM', () => pool?.end().finally(() => process.exit(0)));
+
+export default app;

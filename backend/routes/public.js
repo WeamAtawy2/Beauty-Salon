@@ -4,31 +4,27 @@ import { dateInTimezone, inTimezone, makeSlots, toDate } from '../services/avail
 
 const router = Router();
 const activeStatuses = ['confirmed', 'pending'];
-const demoServices = [
-  { id: 'svc-1', name: 'قص وتصفيف', category: 'الشعر', description: 'تجهيز الشعر مع لمسة نهائية أنيقة ومناسبة للوقائع اليومية.', durationMinutes: 60, price: 120, currency: 'ILS' },
-  { id: 'svc-2', name: 'مكياج عروس', category: 'العروس', description: 'إطلالة عروس فاخرة مع لمسة إضاءة دقيقة ومخصصة للحدث.', durationMinutes: 120, price: 450, currency: 'ILS' },
-  { id: 'svc-3', name: 'عناية البشرة', category: 'العناية', description: 'جلسة ترطيب وتنشيط للعناية اليومية وتفتيح البشرة.', durationMinutes: 45, price: 180, currency: 'ILS' },
-  { id: 'svc-4', name: 'تنسيق الحواجب', category: 'الحواجب', description: 'تحديد وتعليق الحواجب لإبراز الوجه بطريقة طبيعية.', durationMinutes: 30, price: 90, currency: 'ILS' },
-];
-const buildDemoSlots = (date) => ['10:00', '10:30', '11:30', '12:30', '14:00', '15:00', '16:00', '17:00'].map((time) => ({ time, label: time }));
-const isDemoServiceId = (value) => typeof value === 'string' && /^svc-[a-z0-9-]+$/i.test(value);
 
 router.get('/services', async (req, res, next) => {
   try {
-    if (!req.db) return res.json({ services: demoServices });
+    if (!req.db) {
+      return res.status(503).json({ error: 'The services database is not configured.' });
+    }
     const { rows } = await req.db.query('SELECT id, name, category, description, duration_minutes AS "durationMinutes", price, currency FROM services WHERE active = true ORDER BY category, name');
-    res.json({ services: rows.length ? rows : demoServices });
+    res.json({ services: rows });
   } catch (error) { next(error); }
 });
 
 router.get('/availability', async (req, res, next) => {
   try {
+    if (!req.db) {
+      return res.status(503).json({ error: 'The booking database is not configured.' });
+    }
     const { serviceId, date, type = 'salon' } = req.query;
     const parsedDate = toDate(date);
-    const validService = /^[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}$/i.test(serviceId || '') || isDemoServiceId(serviceId);
+    const validService = /^[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}$/i.test(serviceId || '');
     if (!parsedDate || !validService || !['salon', 'vip'].includes(type)) return res.status(400).json({ error: 'اختاري الخدمة والتاريخ ونوع الحجز بشكل صحيح.' });
     if (date < dateInTimezone(new Date(), process.env.BUSINESS_TIMEZONE || 'Asia/Hebron')) return res.status(400).json({ error: 'اختاري تاريخاً من اليوم أو بعده.' });
-    if (!req.db) return res.json({ slots: buildDemoSlots(date) });
     const { rows: services } = await req.db.query('SELECT duration_minutes FROM services WHERE id = $1 AND active = true', [serviceId]);
     if (!services[0]) return res.status(404).json({ error: 'هذه الخدمة غير متاحة حالياً.' });
     const weekday = parsedDate.getUTCDay();
@@ -53,18 +49,15 @@ router.get('/availability', async (req, res, next) => {
 });
 
 router.post('/bookings', async (req, res, next) => {
+  if (!req.db) {
+    return res.status(503).json({ error: 'The booking database is not configured.' });
+  }
   const { serviceId, date, time, type = 'salon', name, phone, email = '', notes = '' } = req.body || {};
   const parsedDate = toDate(date);
-  const validService = /^[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}$/i.test(serviceId || '') || isDemoServiceId(serviceId);
+  const validService = /^[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}$/i.test(serviceId || '');
   if (!validService || !parsedDate || !/^\d{2}:\d{2}$/.test(time || '') || !['salon', 'vip'].includes(type) || typeof name !== 'string' || name.trim().length < 2 || name.trim().length > 120 || typeof phone !== 'string' || phone.trim().length < 7 || phone.trim().length > 40 || (email && (typeof email !== 'string' || email.length > 254)) || typeof notes !== 'string' || notes.length > 1000) return res.status(400).json({ error: 'تحققي من معلومات الحجز وحاولي مرة أخرى.' });
   const [hour, minute] = time.split(':').map(Number);
   if (hour > 23 || minute > 59 || date < dateInTimezone(new Date(), process.env.BUSINESS_TIMEZONE || 'Asia/Hebron')) return res.status(400).json({ error: 'التاريخ أو الوقت غير صالح.' });
-
-  if (!req.db) {
-    const selectedService = demoServices.find((service) => service.id === serviceId) || demoServices[0];
-    const bookingNumber = `DEMO-${new Date().getFullYear()}-${String(Math.floor(Math.random() * 900000) + 100000)}`;
-    return res.status(201).json({ booking: { bookingNumber, customerName: name.trim(), serviceName: selectedService.name, date, time, type } });
-  }
 
   const client = await req.db.connect();
   try {
