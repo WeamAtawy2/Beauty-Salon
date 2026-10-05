@@ -21,8 +21,8 @@ app.use(express.json({ limit: '20kb' }));
 app.use('/api', rateLimit({ windowMs: 15 * 60 * 1000, limit: 120, standardHeaders: 'draft-7', legacyHeaders: false }));
 app.use('/api', (req, res, next) => {
   if (req.path === '/health') return next();
-  if (!pool) return res.status(503).json({ error: 'الحجز الإلكتروني قيد الإعداد. تواصلي معنا مباشرةً ريثما تكتمل التهيئة.' });
-  req.db = pool; next();
+  req.db = pool;
+  next();
 });
 app.get('/api/health', (req, res) => res.json({ status: pool ? 'ready' : 'setup-required' }));
 app.use('/api', publicRoutes);

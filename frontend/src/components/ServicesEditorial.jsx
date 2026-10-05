@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import Icon from './Icon.jsx';
 import SectionHeading from './SectionHeading.jsx';
 import { categories } from '../data/content.js';
@@ -22,8 +22,13 @@ function formatPrice(service) {
 export default function ServicesEditorial() {
   const [services, setServices] = useState([]);
   const [loaded, setLoaded] = useState(false);
+  const [loadError, setLoadError] = useState('');
+  const gridRef = useRef(null);
   useEffect(() => {
-    getServices().then(({ services: records = [] }) => setServices(records)).catch(() => setServices([])).finally(() => setLoaded(true));
+    getServices().then(({ services: records = [] }) => setServices(records)).catch((error) => {
+      setLoadError(error.message);
+      setServices([]);
+    }).finally(() => setLoaded(true));
   }, []);
 
   const entries = services.length ? services.map((service, index) => ({
@@ -41,9 +46,26 @@ export default function ServicesEditorial() {
     key: item.number,
   }));
 
+  useEffect(() => {
+    const cards = [...(gridRef.current?.querySelectorAll('.service-editorial') || [])];
+    if (!('IntersectionObserver' in window)) {
+      cards.forEach((card) => card.classList.add('service-editorial-visible'));
+      return undefined;
+    }
+    cards.forEach((card) => card.classList.add('service-editorial-pending'));
+    const observer = new IntersectionObserver((changes) => changes.forEach((change) => {
+      if (!change.isIntersecting) return;
+      change.target.classList.add('service-editorial-visible');
+      change.target.classList.remove('service-editorial-pending');
+      observer.unobserve(change.target);
+    }), { threshold: 0.14, rootMargin: '0px 0px -4% 0px' });
+    cards.forEach((card) => observer.observe(card));
+    return () => observer.disconnect();
+  }, [services]);
+
   return <section id="services" className="services-section wrap scroll-reveal">
     <SectionHeading eyebrow="عناية تليق بكِ" title="تجربتكِ، على طريقتكِ" description="من تفاصيل الشعر والمكياج إلى استعدادات يومكِ الأجمل، اختاري ما يشبهكِ." />
-    <div className="services-editorial">
+    <div className="services-editorial" ref={gridRef}>
       {entries.map((item, index) => <article className={`service-editorial service-editorial-${index % 6 + 1}`} key={item.key}>
         <a href="#booking" className="service-editorial-image" aria-label={`احجزي ${item.title}`}>
           <img src={item.image} alt={item.title} loading={index > 1 ? 'lazy' : 'eager'} />
@@ -58,6 +80,6 @@ export default function ServicesEditorial() {
         </div>
       </article>)}
     </div>
-    {loaded && services.length === 0 && <p className="service-note">ستظهر الخدمات والأسعار المعتمدة هنا عند ربط قائمة الصالون، ويمكنكِ استعراضها في نموذج الحجز.</p>}
+    {loaded && services.length === 0 && <p className="service-note" role={loadError ? 'alert' : undefined}>{loadError || 'ستظهر الخدمات والأسعار المعتمدة هنا عند تحديث قائمة الصالون، ويمكنكِ متابعة الحجز لاستعراض الأوقات المتاحة.'}</p>}
   </section>;
 }
